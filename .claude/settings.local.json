@@ -512,7 +512,14 @@
       "Bash(MSYS_NO_PATHCONV=1 adb shell screencap -p /sdcard/v6test4.png)",
       "Bash(MSYS_NO_PATHCONV=1 adb pull /sdcard/v6test4.png \"C:\\\\Penny Ledger\\\\v6test4.png\")",
       "Bash(MSYS_NO_PATHCONV=1 adb shell screencap -p /sdcard/v6test5.png)",
-      "Bash(MSYS_NO_PATHCONV=1 adb pull /sdcard/v6test5.png \"C:\\\\Penny Ledger\\\\v6test5.png\")"
+      "Bash(MSYS_NO_PATHCONV=1 adb pull /sdcard/v6test5.png \"C:\\\\Penny Ledger\\\\v6test5.png\")",
+      "Bash(MSYS_NO_PATHCONV=1 adb shell screencap -p /sdcard/check2.png)",
+      "Bash(MSYS_NO_PATHCONV=1 adb pull /sdcard/check2.png \"C:\\\\Penny Ledger\\\\check2.png\")",
+      "Bash(MSYS_NO_PATHCONV=1 adb shell screencap -p /sdcard/check3.png)",
+      "Bash(MSYS_NO_PATHCONV=1 adb pull /sdcard/check3.png \"C:\\\\Penny Ledger\\\\check3.png\")",
+      "Bash(MSYS_NO_PATHCONV=1 adb shell screencap -p /sdcard/check5.png)",
+      "Bash(MSYS_NO_PATHCONV=1 adb pull /sdcard/check5.png \"C:\\\\Penny Ledger\\\\check5.png\")",
+      "Bash(MSYS_NO_PATHCONV=1 adb shell input tap 756 2180)"
     ]
   }
 }
