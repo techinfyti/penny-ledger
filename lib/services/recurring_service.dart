@@ -45,6 +45,12 @@ class RecurringService {
     final currentMonthKey = _monthKey(now);
     final snapshot = await _recurringRef(uid).where('active', isEqualTo: true).get();
 
+    // Runs on every app launch, so it needs to stay fast even when several
+    // templates are due at once (e.g. start of a new month) — one batched
+    // commit instead of awaiting a pair of writes per template in sequence.
+    final batch = _db.batch();
+    var hasWrites = false;
+
     for (final doc in snapshot.docs) {
       final template = RecurringTransaction.fromFirestore(doc);
       if (template.lastGeneratedMonth == currentMonthKey) continue;
@@ -53,22 +59,23 @@ class RecurringService {
       final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
       final generatedDay = template.dayOfMonth.clamp(1, daysInMonth);
 
-      await _firestoreService.addExpense(
-        uid,
-        Expense(
-          id: '',
-          amount: template.amount,
-          category: template.category,
-          date: DateTime(now.year, now.month, generatedDay),
-          note: template.note,
-          type: template.type,
-          paymentMethod: template.paymentMethod,
-          accountId: template.accountId,
-          personName: template.personName,
-          groupId: template.groupId,
-        ),
+      final expense = Expense(
+        id: '',
+        amount: template.amount,
+        category: template.category,
+        date: DateTime(now.year, now.month, generatedDay),
+        note: template.note,
+        type: template.type,
+        paymentMethod: template.paymentMethod,
+        accountId: template.accountId,
+        personName: template.personName,
+        groupId: template.groupId,
       );
-      await doc.reference.update({'lastGeneratedMonth': currentMonthKey});
+      batch.set(_firestoreService.newExpenseRef(uid), expense.toFirestore());
+      batch.update(doc.reference, {'lastGeneratedMonth': currentMonthKey});
+      hasWrites = true;
     }
+
+    if (hasWrites) await batch.commit();
   }
 }

@@ -37,8 +37,12 @@ class _HomeScreenState extends State<HomeScreen> {
     context.read<PurchaseService>().init(widget.uid);
     await accountService.ensureDefaultAccount(widget.uid);
     await accountService.loadSavedAccount();
-    await context.read<CategoryService>().pruneCustomCategoriesMatchingDefaults(widget.uid).catchError((_) {});
-    await context.read<RecurringService>().processDueRecurring(widget.uid).catchError((_) {});
+    // Neither depends on the other or on the account load above (both take
+    // just the uid), so run them together instead of back-to-back.
+    await Future.wait([
+      context.read<CategoryService>().pruneCustomCategoriesMatchingDefaults(widget.uid).catchError((_) {}),
+      context.read<RecurringService>().processDueRecurring(widget.uid).catchError((_) {}),
+    ]);
     if (mounted) setState(() => _ready = true);
   }
 

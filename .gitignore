@@ -41,4 +41,12 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/build/
 .claude/settings.local.json
+
+# Ad-hoc testing/reference screenshots
+/check*.png
+/migtest*.png
+/shot_*.png
+/upd_v8_1.png
+/verify*.png

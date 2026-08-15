@@ -33,7 +33,21 @@ class DriveBackupService {
   }
 
   Future<Map<String, dynamic>> _buildBackupPayload(String uid) async {
-    final expensesSnap = await _db.collection('users').doc(uid).collection('expenses').get();
+    final userRef = _db.collection('users').doc(uid);
+
+    // The six collections below are independent reads — fetching them in
+    // parallel instead of one-await-at-a-time cuts backup time to roughly
+    // the slowest single read instead of the sum of all six.
+    final results = await Future.wait([
+      userRef.collection('expenses').get(),
+      userRef.collection('meta').doc('categories').get(),
+      userRef.collection('budgets').get(),
+      userRef.collection('recurring').get(),
+      userRef.collection('accounts').get(),
+      userRef.collection('groups').get(),
+    ]);
+
+    final expensesSnap = results[0] as QuerySnapshot<Map<String, dynamic>>;
     final expenses = expensesSnap.docs.map((doc) {
       final data = Map<String, dynamic>.from(doc.data());
       data['id'] = doc.id;
@@ -43,12 +57,12 @@ class DriveBackupService {
       return data;
     }).toList();
 
-    final categoriesDoc = await _db.collection('users').doc(uid).collection('meta').doc('categories').get();
+    final categoriesDoc = results[1] as DocumentSnapshot<Map<String, dynamic>>;
 
-    final budgetsSnap = await _db.collection('users').doc(uid).collection('budgets').get();
+    final budgetsSnap = results[2] as QuerySnapshot<Map<String, dynamic>>;
     final budgets = {for (final doc in budgetsSnap.docs) doc.id: doc.data()};
 
-    final recurringSnap = await _db.collection('users').doc(uid).collection('recurring').get();
+    final recurringSnap = results[3] as QuerySnapshot<Map<String, dynamic>>;
     final recurring = recurringSnap.docs.map((doc) {
       final data = Map<String, dynamic>.from(doc.data());
       data['id'] = doc.id;
@@ -56,7 +70,7 @@ class DriveBackupService {
       return data;
     }).toList();
 
-    final accountsSnap = await _db.collection('users').doc(uid).collection('accounts').get();
+    final accountsSnap = results[4] as QuerySnapshot<Map<String, dynamic>>;
     final accounts = accountsSnap.docs.map((doc) {
       final data = Map<String, dynamic>.from(doc.data());
       data['id'] = doc.id;
@@ -65,7 +79,7 @@ class DriveBackupService {
       return data;
     }).toList();
 
-    final groupsSnap = await _db.collection('users').doc(uid).collection('groups').get();
+    final groupsSnap = results[5] as QuerySnapshot<Map<String, dynamic>>;
     final groups = groupsSnap.docs.map((doc) {
       final data = Map<String, dynamic>.from(doc.data());
       data['id'] = doc.id;
@@ -126,8 +140,15 @@ class DriveBackupService {
       bytes.addAll(chunk);
     }
     final payload = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+    final userRef = _db.collection('users').doc(uid);
 
-    final expensesRef = _db.collection('users').doc(uid).collection('expenses');
+    // A restore can involve hundreds of documents across five collections;
+    // awaiting one write at a time made this take minutes. Queue every write
+    // into batches instead (Firestore caps a batch at 500 operations) and
+    // commit them in parallel.
+    final writes = <_PendingWrite>[];
+
+    final expensesRef = userRef.collection('expenses');
     final expenses = (payload['expenses'] as List? ?? []);
     for (final raw in expenses) {
       final data = Map<String, dynamic>.from(raw as Map);
@@ -135,49 +156,63 @@ class DriveBackupService {
       final dateStr = data['date'] as String?;
       if (dateStr != null) data['date'] = Timestamp.fromDate(DateTime.parse(dateStr));
       data['createdAt'] = FieldValue.serverTimestamp();
-      await expensesRef.doc(id).set(data);
+      writes.add(_PendingWrite(expensesRef.doc(id), data));
     }
 
     final categories = payload['categories'] as Map<String, dynamic>?;
     if (categories != null && categories.isNotEmpty) {
-      await _db.collection('users').doc(uid).collection('meta').doc('categories').set(categories);
+      writes.add(_PendingWrite(userRef.collection('meta').doc('categories'), categories));
     }
 
+    final budgetsRef = userRef.collection('budgets');
     final budgets = payload['budgets'] as Map<String, dynamic>? ?? {};
     for (final entry in budgets.entries) {
-      await _db
-          .collection('users')
-          .doc(uid)
-          .collection('budgets')
-          .doc(entry.key)
-          .set(Map<String, dynamic>.from(entry.value as Map));
+      writes.add(_PendingWrite(budgetsRef.doc(entry.key), Map<String, dynamic>.from(entry.value as Map)));
     }
 
-    final recurringRef = _db.collection('users').doc(uid).collection('recurring');
+    final recurringRef = userRef.collection('recurring');
     final recurring = (payload['recurring'] as List? ?? []);
     for (final raw in recurring) {
       final data = Map<String, dynamic>.from(raw as Map);
       final id = data.remove('id') as String;
       data['createdAt'] = FieldValue.serverTimestamp();
-      await recurringRef.doc(id).set(data);
+      writes.add(_PendingWrite(recurringRef.doc(id), data));
     }
 
-    final accountsRef = _db.collection('users').doc(uid).collection('accounts');
+    final accountsRef = userRef.collection('accounts');
     final accounts = (payload['accounts'] as List? ?? []);
     for (final raw in accounts) {
       final data = Map<String, dynamic>.from(raw as Map);
       final id = data.remove('id') as String;
       data['createdAt'] = FieldValue.serverTimestamp();
-      await accountsRef.doc(id).set(data);
+      writes.add(_PendingWrite(accountsRef.doc(id), data));
     }
 
-    final groupsRef = _db.collection('users').doc(uid).collection('groups');
+    final groupsRef = userRef.collection('groups');
     final groups = (payload['groups'] as List? ?? []);
     for (final raw in groups) {
       final data = Map<String, dynamic>.from(raw as Map);
       final id = data.remove('id') as String;
       data['createdAt'] = FieldValue.serverTimestamp();
-      await groupsRef.doc(id).set(data);
+      writes.add(_PendingWrite(groupsRef.doc(id), data));
     }
+
+    const chunkSize = 500;
+    final commits = <Future<void>>[];
+    for (var i = 0; i < writes.length; i += chunkSize) {
+      final chunk = writes.skip(i).take(chunkSize);
+      final batch = _db.batch();
+      for (final write in chunk) {
+        batch.set(write.ref, write.data);
+      }
+      commits.add(batch.commit());
+    }
+    await Future.wait(commits);
   }
+}
+
+class _PendingWrite {
+  final DocumentReference<Map<String, dynamic>> ref;
+  final Map<String, dynamic> data;
+  _PendingWrite(this.ref, this.data);
 }

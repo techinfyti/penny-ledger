@@ -20,7 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     try {
       final auth = context.read<AuthService>();
-      final result = await auth.signInWithGoogle();
+      final result = await _signInWithRetry(auth);
       if (result == null && mounted) {
         setState(() => _error = 'Sign-in was cancelled.');
       }
@@ -28,6 +28,23 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) setState(() => _error = 'Sign-in failed: $e');
     } finally {
       if (mounted) setState(() => _signingIn = false);
+    }
+  }
+
+  /// Google Play Services can throw a transient "main thread deadlock"
+  /// PlatformException on the very first sign-in for a Google account that
+  /// was only just added to the device, before it's fully synced locally.
+  /// Retrying once after a brief pause resolves it without surfacing the
+  /// error to the user.
+  Future<dynamic> _signInWithRetry(AuthService auth) async {
+    try {
+      return await auth.signInWithGoogle();
+    } catch (e) {
+      if (e.toString().contains('deadlock')) {
+        await Future.delayed(const Duration(milliseconds: 800));
+        return auth.signInWithGoogle();
+      }
+      rethrow;
     }
   }
 

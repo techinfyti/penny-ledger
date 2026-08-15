@@ -12,6 +12,13 @@ class FirestoreService {
     return _expensesRef(uid).add(expense.toFirestore());
   }
 
+  /// A fresh document reference for a new expense, for callers that need to
+  /// batch multiple writes together (see RecurringService.processDueRecurring)
+  /// instead of awaiting addExpense one at a time.
+  DocumentReference<Map<String, dynamic>> newExpenseRef(String uid) {
+    return _expensesRef(uid).doc();
+  }
+
   Future<void> updateExpense(String uid, Expense expense) {
     return _expensesRef(uid).doc(expense.id).update(expense.toFirestore());
   }
@@ -56,13 +63,17 @@ class FirestoreService {
   }
 
   Stream<List<Expense>> allExpenses(String uid, String accountId, {int limit = 200}) {
+    // Filtering by accountId in Firestore (rather than fetching the global
+    // top-`limit` and filtering client-side) matters once a user has more
+    // than one account: the old client-side filter could silently return
+    // fewer than `limit` results — or none — for a less-active account,
+    // since its documents might not even be among the top 200 across all
+    // accounts. Requires a composite index on (accountId, date).
     return _expensesRef(uid)
+        .where('accountId', isEqualTo: accountId)
         .orderBy('date', descending: true)
         .limit(limit)
         .snapshots()
-        .map((snap) => snap.docs
-            .map(Expense.fromFirestore)
-            .where((e) => e.accountId == accountId)
-            .toList());
+        .map((snap) => snap.docs.map(Expense.fromFirestore).toList());
   }
 }

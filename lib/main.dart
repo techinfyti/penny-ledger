@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -33,21 +35,31 @@ Future<void> main() async {
   ]);
   await Firebase.initializeApp();
   final currencyService = CurrencyService();
-  await currencyService.load();
   final appLockService = AppLockService();
-  await appLockService.load();
   final themeService = ThemeService();
-  await themeService.load();
   final notificationService = NotificationService();
-  await notificationService.init();
-  await notificationService.requestPermission();
-  await MobileAds.instance.initialize();
+  // These are independent local reads (SharedPreferences) plus the local
+  // notification plugin/channel setup — all needed before the first frame
+  // so the app doesn't flash the wrong theme/lock state. Run them in
+  // parallel rather than sequentially.
+  await Future.wait([
+    currencyService.load(),
+    appLockService.load(),
+    themeService.load(),
+    notificationService.init(),
+  ]);
   runApp(DailyExpenseApp(
     currencyService: currencyService,
     appLockService: appLockService,
     themeService: themeService,
     notificationService: notificationService,
   ));
+  // The notification permission dialog and AdMob's network-backed init can
+  // each take several seconds, especially on a device's very first launch.
+  // Neither is needed for the first frame, so they run in the background
+  // after the UI is already visible instead of blocking startup on them.
+  unawaited(notificationService.requestPermission());
+  unawaited(MobileAds.instance.initialize());
 }
 
 class DailyExpenseApp extends StatelessWidget {
