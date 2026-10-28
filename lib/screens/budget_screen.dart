@@ -14,6 +14,8 @@ import '../widgets/currency_selector_button.dart';
 import '../widgets/group_filter_chips.dart';
 import '../widgets/legend_dot.dart';
 import '../widgets/logout_button.dart';
+import '../widgets/month_picker.dart';
+import '../widgets/settings_button.dart';
 import '../widgets/stat_card.dart';
 
 class BudgetScreen extends StatefulWidget {
@@ -27,39 +29,96 @@ class BudgetScreen extends StatefulWidget {
 
 class _BudgetScreenState extends State<BudgetScreen> {
   String? _groupFilter;
+  DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
+
+  void _changeMonth(int delta) {
+    setState(() => _month = DateTime(_month.year, _month.month + delta));
+  }
+
+  Future<void> _chooseMonth() async {
+    final picked = await pickMonth(context, _month);
+    if (picked != null) setState(() => _month = picked);
+  }
+
+  Future<void> _copyFromPreviousMonth(String accountId) async {
+    final budgetService = context.read<BudgetService>();
+    final messenger = ScaffoldMessenger.of(context);
+    final previous = DateTime(_month.year, _month.month - 1);
+    final label = DateFormat('MMMM yyyy').format(previous);
+    try {
+      final copied = await budgetService.copyLimits(widget.uid, accountId, previous, _month);
+      messenger.showSnackBar(SnackBar(
+        content: Text(copied == 0
+            ? 'Nothing to copy from $label (it has no limits, or this month already has them).'
+            : 'Copied $copied ${copied == 1 ? 'limit' : 'limits'} from $label.'),
+      ));
+    } catch (_) {
+      messenger.showSnackBar(const SnackBar(content: Text('Couldn\'t copy the budget. Check your connection and try again.')));
+    }
+  }
 
   Future<void> _editCategoryLimit(BuildContext context, String accountId, String category, double? currentLimit) async {
     final budgetService = context.read<BudgetService>();
     final controller = TextEditingController(
       text: currentLimit != null && currentLimit > 0 ? currentLimit.toStringAsFixed(0) : '',
     );
+    var limitMonth = _month;
+    final hasCurrentLimit = currentLimit != null && currentLimit > 0;
     final result = await showDialog<double>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Set limit for $category'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(labelText: 'Limit amount'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Set limit for $category'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: controller,
+                autofocus: true,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Limit amount'),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.calendar_month_outlined),
+                label: Text('Month: ${DateFormat('MMMM yyyy').format(limitMonth)}'),
+                onPressed: () async {
+                  final picked = await pickMonth(context, limitMonth);
+                  if (picked != null) setDialogState(() => limitMonth = picked);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            if (hasCurrentLimit && limitMonth == _month)
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(-1.0),
+                child: Text('Remove limit', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final value = double.tryParse(controller.text);
+                Navigator.of(context).pop(value);
+              },
+              child: const Text('Save'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final value = double.tryParse(controller.text);
-              Navigator.of(context).pop(value);
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
-    if (result == null || result <= 0) return;
-    await budgetService.setCategoryLimit(widget.uid, accountId, DateTime.now(), category, result);
+    if (result == null) return;
+    if (result == -1.0) {
+      await budgetService.clearCategoryLimit(widget.uid, accountId, _month, category);
+      return;
+    }
+    if (result <= 0) return;
+    await budgetService.setCategoryLimit(widget.uid, accountId, limitMonth, category, result);
+    if (mounted) setState(() => _month = limitMonth);
   }
 
   @override
@@ -69,16 +128,16 @@ class _BudgetScreenState extends State<BudgetScreen> {
     final firestore = context.read<FirestoreService>();
     final accountId = context.watch<AccountService>().currentAccountId;
     final currencySymbol = context.watch<CurrencyService>().symbol;
-    final now = DateTime.now();
-    final monthLabel = DateFormat('MMMM yyyy').format(now);
+    final month = _month;
+    final monthLabel = DateFormat('MMMM yyyy').format(month);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Budget'),
-        actions: const [CurrencySelectorButton(), LogoutButton()],
+        actions: [SettingsButton(uid: widget.uid), const CurrencySelectorButton(), const LogoutButton()],
       ),
       body: StreamBuilder<List<Expense>>(
-        stream: firestore.expensesForMonth(widget.uid, accountId, now),
+        stream: firestore.expensesForMonth(widget.uid, accountId, month),
         builder: (context, txSnapshot) {
           final transactions = txSnapshot.data ?? [];
           var expenses = transactions.where((e) => e.type == TransactionType.expense).toList();
@@ -88,7 +147,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
           final spentByCategory = totalsByCategory(expenses);
 
           return StreamBuilder<Map<String, double>>(
-            stream: budgetService.categoryLimitsForMonth(widget.uid, accountId, now),
+            stream: budgetService.categoryLimitsForMonth(widget.uid, accountId, month),
             builder: (context, categoryBudgetSnapshot) {
               final categoryLimits = categoryBudgetSnapshot.data ?? {};
 
@@ -114,12 +173,20 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     padding: const EdgeInsets.all(16),
                     children: [
                       Text('Budget Overview', style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 4),
-                      Text(
-                        monthLabel,
-                        style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      Row(
+                        children: [
+                          IconButton(icon: const Icon(Icons.chevron_left), tooltip: 'Previous month', onPressed: () => _changeMonth(-1)),
+                          Expanded(
+                            child: TextButton.icon(
+                              onPressed: _chooseMonth,
+                              icon: const Icon(Icons.calendar_month_outlined, size: 18),
+                              label: Text(monthLabel, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                            ),
+                          ),
+                          IconButton(icon: const Icon(Icons.chevron_right), tooltip: 'Next month', onPressed: () => _changeMonth(1)),
+                        ],
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       GroupFilterChips(
                         uid: widget.uid,
                         selectedGroupId: _groupFilter,
@@ -241,6 +308,15 @@ class _BudgetScreenState extends State<BudgetScreen> {
                       Text(
                         'Monthly limits · $monthLabel · ${context.watch<CurrencyService>().currency.code}',
                         style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _copyFromPreviousMonth(accountId),
+                          icon: const Icon(Icons.copy_all_outlined, size: 18),
+                          label: Text('Copy ${DateFormat('MMMM').format(DateTime(month.year, month.month - 1))}\'s budget'),
+                        ),
                       ),
                       const SizedBox(height: 12),
                       ...categories.map((category) {

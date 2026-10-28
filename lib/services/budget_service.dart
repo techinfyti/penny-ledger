@@ -29,6 +29,24 @@ class BudgetService {
     await _categoryBudgetDoc(uid, accountId, month).update({category: FieldValue.delete()});
   }
 
+  /// Copies every category limit from one month into another, keeping any
+  /// limit already set in the target month. Returns how many were copied.
+  Future<int> copyLimits(String uid, String accountId, DateTime from, DateTime to) async {
+    final source = await _categoryBudgetDoc(uid, accountId, from).get();
+    final target = await _categoryBudgetDoc(uid, accountId, to).get();
+    final existing = target.data() ?? {};
+    final toCopy = <String, double>{};
+    (source.data() ?? {}).forEach((key, value) {
+      if (key == 'alerts' || value is! num || value <= 0) return;
+      final current = existing[key];
+      if (current is num && current > 0) return;
+      toCopy[key] = value.toDouble();
+    });
+    if (toCopy.isEmpty) return 0;
+    await _categoryBudgetDoc(uid, accountId, to).set(toCopy, SetOptions(merge: true));
+    return toCopy.length;
+  }
+
   Future<double?> categoryLimitOnce(String uid, String accountId, DateTime month, String category) async {
     final doc = await _categoryBudgetDoc(uid, accountId, month).get();
     final value = doc.data()?[category];

@@ -14,7 +14,7 @@ class FaqScreen extends StatelessWidget {
     ),
     (
       'What does Premium unlock?',
-      'Premium unlocks unlimited accounts, Google Drive backup & restore, CSV export, an ad-free experience, and priority support. Go to Settings → Upgrade to Premium to see current pricing.',
+      'Premium unlocks unlimited accounts, Google Drive backup & restore, CSV export, Import Transactions (from Google Pay, bank and Paytm statements), an ad-free experience, and priority support. Go to Settings → Upgrade to Premium to see current pricing.',
     ),
     (
       'How do I back up my data?',
@@ -34,7 +34,47 @@ class FaqScreen extends StatelessWidget {
     ),
     (
       'How do budget alerts work?',
-      'Set a monthly limit for a category under the Budget tab. You\'ll get a notification when your spending crosses 80% and 100% of that limit.',
+      'Set a monthly limit for a category under the Budget tab. You\'ll get a notification when your spending crosses 80% and 100% of that limit for that month.',
+    ),
+    (
+      'Where are Settings and the ⋮ menu?',
+      'The Settings icon (⚙) is in the top bar of every tab: Daily, Monthly, Yearly, History and Budget. The ⋮ menu on Daily, Monthly, Yearly and History has Import Transactions, Download / Share PDF, Print PDF, Export CSV and Recurring transactions. History\'s ⋮ menu also has Filter by date.',
+    ),
+    (
+      'How do I import transactions from a statement? (Premium)',
+      'Import Transactions is a Premium feature. Tap ⋮ → Import Transactions on Daily, Monthly, Yearly or History, then Choose file. PennyLedger reads the file on your phone and shows every transaction with a tick box, its category and the amount. Untick anything you don\'t want, change categories if needed, optionally choose a Group, and tap Import. Nothing is saved until you tap Import.',
+    ),
+    (
+      'Which statements can I import?',
+      '• Google Pay: the PDF "Transaction statement" (Google Pay → Show transaction history → download icon → pick the dates). Totals are checked against the totals printed on the statement.\n'
+          '• Banks: the CSV or Excel (.xlsx) statement from net banking or your bank\'s app. It needs a Date column and either Debit / Credit columns or one Amount column.\n'
+          '• Paytm: the CSV or Excel statement downloaded from Paytm.\n'
+          '• PhonePe, BHIM, Amazon Pay and other UPI apps: their PDF statements are not supported yet. Use your bank\'s CSV or Excel statement instead, which includes those UPI payments.\n'
+          '• Old .xls files: open the file in Excel and save it as .xlsx or CSV first. Password-protected PDFs are supported: the app asks for the password.',
+    ),
+    (
+      'How are imported transactions recorded?',
+      'Money sent or debited becomes an expense, and money received or credited becomes income. The payment method is GPay for Google Pay statements and Online for bank and Paytm files. Categories are suggested from the shop or person\'s name, and you can change any of them before importing. PennyLedger remembers the category you pick for each name and uses it next time. Transactions go into the account you currently have selected.',
+    ),
+    (
+      'Can I put imported transactions into a group?',
+      'Yes. On the review screen, choose a Group (or tap Add new group) and every imported transaction gets that group. If one statement belongs to different groups, untick the rows that don\'t belong, import, then import again with the other group.',
+    ),
+    (
+      'Will importing the same statement twice create duplicates?',
+      'No. Transactions that are already in your account, matched by UPI reference or by the same date, amount and type, are marked "Already added" and left unticked.',
+    ),
+    (
+      'How do monthly budgets work?',
+      'Every month has its own limits. On the Budget tab, use the ‹ › arrows or tap the month name to look at any earlier or later month; the totals, chart and categories change with it. To set or change a limit, tap Set Limit or Edit on a category, enter the amount and choose the month in the same box.',
+    ),
+    (
+      'How do I copy last month\'s budget?',
+      'Open the Budget tab, go to the month you want to fill, and tap the "Copy (previous month)\'s budget" button above the category list. All limits from the previous month are copied. Limits you have already set in this month are kept, not overwritten.',
+    ),
+    (
+      'How do I remove a budget limit?',
+      'Tap Edit on the category, then Remove limit. It only clears that category for the month you are viewing; other months are not affected.',
     ),
     (
       'Is my app lock the same as my phone lock?',
@@ -42,7 +82,7 @@ class FaqScreen extends StatelessWidget {
     ),
     (
       'How do I export my transactions?',
-      'PDF export/print is available from any dashboard\'s PDF icon. CSV export (Premium) is available from the History tab.',
+      'Tap the ⋮ menu at the top of Daily, Monthly, Yearly or History. Download / Share PDF and Print PDF cover the day, month or year you are viewing (or the filtered list in History). Export CSV is a Premium feature and works the same way.',
     ),
     (
       'Can I change the app\'s color theme?',

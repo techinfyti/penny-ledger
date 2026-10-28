@@ -72,6 +72,7 @@ class Expense {
   final String accountId;
   final String personName;
   final String? groupId;
+  final String? upiRef;
 
   Expense({
     required this.id,
@@ -84,6 +85,7 @@ class Expense {
     this.accountId = 'personal',
     this.personName = '',
     this.groupId,
+    this.upiRef,
   });
 
   factory Expense.fromFirestore(DocumentSnapshot doc) {
@@ -99,6 +101,7 @@ class Expense {
       accountId: data['accountId'] as String? ?? 'personal',
       personName: data['personName'] as String? ?? '',
       groupId: data['groupId'] as String?,
+      upiRef: data['upiRef'] as String?,
     );
   }
 
@@ -113,6 +116,7 @@ class Expense {
       'accountId': accountId,
       'personName': personName,
       'groupId': groupId,
+      if (upiRef != null) 'upiRef': upiRef,
       'createdAt': FieldValue.serverTimestamp(),
     };
   }

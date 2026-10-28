@@ -11,9 +11,14 @@ import '../widgets/banner_ad_widget.dart';
 import '../widgets/currency_selector_button.dart';
 import '../widgets/group_filter_chips.dart';
 import '../widgets/logout_button.dart';
+import '../widgets/settings_button.dart';
 import '../widgets/summary_card.dart';
 import '../widgets/transaction_tile.dart';
-import 'settings_screen.dart';
+import '../services/csv_export_service.dart';
+import '../services/premium_service.dart';
+import 'premium_screen.dart';
+import 'recurring_screen.dart';
+import 'statement_import_screen.dart';
 
 class DailyDashboard extends StatefulWidget {
   final String uid;
@@ -95,6 +100,33 @@ class _DailyDashboardState extends State<DailyDashboard> {
     }
   }
 
+  Future<void> _exportCsv() async {
+    final isPremium = context.read<PremiumService>().isPremium;
+    if (!isPremium) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => PremiumScreen(uid: widget.uid)),
+      );
+      return;
+    }
+    final csvService = context.read<CsvExportService>();
+    setState(() => _exporting = true);
+    try {
+      await csvService.shareCsv(
+        filenamePrefix: 'daily',
+        transactions: _currentTransactions,
+        groupNames: await _groupNames(),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to export CSV: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final firestore = context.read<FirestoreService>();
@@ -106,15 +138,7 @@ class _DailyDashboardState extends State<DailyDashboard> {
       appBar: AppBar(
         title: const Text('Daily'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Settings',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => SettingsScreen(uid: widget.uid)),
-              );
-            },
-          ),
+          SettingsButton(uid: widget.uid),
           const CurrencySelectorButton(),
           PopupMenuButton<String>(
             enabled: !_exporting,
@@ -124,12 +148,35 @@ class _DailyDashboardState extends State<DailyDashboard> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Icons.picture_as_pdf_outlined),
-            tooltip: 'PDF report',
-            onSelected: (value) => value == 'print' ? _printReport() : _exportPdf(),
+                : const Icon(Icons.more_vert),
+            tooltip: 'More options',
+            onSelected: (value) {
+              switch (value) {
+                case 'import':
+                  openStatementImport(context, widget.uid);
+                  break;
+                case 'share':
+                  _exportPdf();
+                  break;
+                case 'print':
+                  _printReport();
+                  break;
+                case 'csv':
+                  _exportCsv();
+                  break;
+                case 'recurring':
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => RecurringScreen(uid: widget.uid)),
+                  );
+                  break;
+              }
+            },
             itemBuilder: (context) => const [
+              PopupMenuItem(value: 'import', child: Text('Import Transactions')),
               PopupMenuItem(value: 'share', child: Text('Download / Share PDF')),
-              PopupMenuItem(value: 'print', child: Text('Print')),
+              PopupMenuItem(value: 'print', child: Text('Print PDF')),
+              PopupMenuItem(value: 'csv', child: Text('Export CSV')),
+              PopupMenuItem(value: 'recurring', child: Text('Recurring transactions')),
             ],
           ),
           const LogoutButton(),

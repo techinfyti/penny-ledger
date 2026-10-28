@@ -19,6 +19,18 @@ class FirestoreService {
     return _expensesRef(uid).doc();
   }
 
+  /// Writes many expenses in batches (Firestore allows 500 operations per batch).
+  Future<void> addExpenses(String uid, List<Expense> expenses) async {
+    const chunkSize = 400;
+    for (var i = 0; i < expenses.length; i += chunkSize) {
+      final batch = _db.batch();
+      for (final expense in expenses.skip(i).take(chunkSize)) {
+        batch.set(_expensesRef(uid).doc(), expense.toFirestore());
+      }
+      await batch.commit();
+    }
+  }
+
   Future<void> updateExpense(String uid, Expense expense) {
     return _expensesRef(uid).doc(expense.id).update(expense.toFirestore());
   }

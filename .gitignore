@@ -50,3 +50,7 @@ app.*.map.json
 /shot_*.png
 /upd_v8_1.png
 /verify*.png
+
+# Personal bank/UPI statements used for local testing
+samples/
+Samples/

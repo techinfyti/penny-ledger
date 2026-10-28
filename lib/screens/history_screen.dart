@@ -12,9 +12,11 @@ import '../services/premium_service.dart';
 import '../widgets/currency_selector_button.dart';
 import '../widgets/group_filter_chips.dart';
 import '../widgets/logout_button.dart';
+import '../widgets/settings_button.dart';
 import '../widgets/transaction_tile.dart';
 import 'premium_screen.dart';
 import 'recurring_screen.dart';
+import 'statement_import_screen.dart';
 
 enum _TypeFilter { all, income, expense }
 
@@ -195,9 +197,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     MaterialPageRoute(builder: (_) => RecurringScreen(uid: widget.uid)),
                   );
                   break;
+                case 'import':
+                  openStatementImport(context, widget.uid);
+                  break;
               }
             },
             itemBuilder: (context) => const [
+              PopupMenuItem(value: 'import', child: Text('Import Transactions')),
               PopupMenuItem(value: 'share', child: Text('Download / Share PDF')),
               PopupMenuItem(value: 'print', child: Text('Print PDF')),
               PopupMenuItem(value: 'csv', child: Text('Export CSV')),
@@ -214,6 +220,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 .map((s) => PopupMenuItem(value: s, child: Text(s.label)))
                 .toList(),
           ),
+          SettingsButton(uid: widget.uid),
           const CurrencySelectorButton(),
           const LogoutButton(),
         ],
