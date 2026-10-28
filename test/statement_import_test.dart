@@ -1,7 +1,10 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'dart:ui' show Rect;
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:penny_ledger/models/expense.dart';
 import 'package:penny_ledger/services/statement_import/category_suggester.dart';
 import 'package:penny_ledger/services/statement_import/csv_statement_parser.dart';
@@ -28,6 +31,31 @@ void main() {
       expect(parsed.items.first.date.month, 9);
       expect(parsed.items.first.date.year, 2026);
     }, skip: file.existsSync() ? false : 'sample statement not present');
+  });
+
+  group('Wrong kind of PDF', () {
+    test('is rejected from the first page, without reading every page', () async {
+      final doc = PdfDocument();
+      for (var page = 0; page < 80; page++) {
+        final graphics = doc.pages.add().graphics;
+        for (var line = 0; line < 40; line++) {
+          graphics.drawString('Page $page line $line: account summary and charges', PdfStandardFont(PdfFontFamily.helvetica, 10),
+              bounds: Rect.fromLTWH(20, 15.0 * line, 500, 14));
+        }
+      }
+      final bytes = Uint8List.fromList(await doc.save());
+      doc.dispose();
+
+      final watch = Stopwatch()..start();
+      await expectLater(
+        StatementReader.read(fileName: 'report.pdf', bytes: bytes),
+        throwsA(isA<StatementFormatException>().having((e) => e.message, 'message', contains('isn\'t a Google Pay statement'))),
+      );
+      watch.stop();
+      // ignore: avoid_print
+      print('Rejected an 80 page PDF in ${watch.elapsedMilliseconds} ms');
+      expect(watch.elapsed, lessThan(const Duration(seconds: 5)));
+    });
   });
 
   group('CSV', () {

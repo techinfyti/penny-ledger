@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -25,6 +26,7 @@ void openStatementImport(BuildContext context, String uid) {
   );
 }
 
+const int _maxFileBytes = 15 * 1024 * 1024;
 const String _addGroupSentinel = '__add_group__';
 const String _noGroupSentinel = '__no_group__';
 
@@ -52,12 +54,26 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['pdf', 'csv', 'xlsx', 'txt'],
-      withData: true,
+      withData: false,
     );
     if (result == null || result.files.isEmpty) return;
     final file = result.files.single;
-    final bytes = file.bytes;
-    if (bytes == null) {
+    // Statements are small. A very large file is almost certainly something else,
+    // and reading it into memory could crash the app.
+    if (file.size > _maxFileBytes) {
+      setState(() => _error = 'This file is too large to be a statement (${(file.size / 1048576).toStringAsFixed(0)} MB). Choose your statement file instead.');
+      return;
+    }
+    final path = file.path;
+    if (path == null) {
+      setState(() => _error = 'Couldn\'t open that file. Try another one.');
+      return;
+    }
+    final Uint8List bytes;
+    try {
+      bytes = await File(path).readAsBytes();
+    } catch (_) {
+      if (!mounted) return;
       setState(() => _error = 'Couldn\'t open that file. Try another one.');
       return;
     }

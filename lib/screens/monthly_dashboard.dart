@@ -10,6 +10,7 @@ import '../services/group_service.dart';
 import '../services/pdf_report_service.dart';
 import '../widgets/category_colors.dart';
 import '../widgets/category_legend.dart';
+import '../widgets/category_pie_chart.dart';
 import '../widgets/chart_axis.dart';
 import '../widgets/currency_selector_button.dart';
 import '../widgets/group_filter_chips.dart';
@@ -335,27 +336,9 @@ class _MonthlyDashboardState extends State<MonthlyDashboard> {
                         const SizedBox(height: 32),
                         const Text('Expenses by category', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                         const SizedBox(height: 12),
-                        SizedBox(
-                          height: 220,
-                          child: PieChart(
-                            PieChartData(
-                              sections: byCategory.entries.map((entry) {
-                                final pct = expenseTotal == 0 ? 0 : (entry.value / expenseTotal * 100);
-                                return PieChartSectionData(
-                                  value: entry.value,
-                                  color: colorForCategory(entry.key),
-                                  title: '${pct.toStringAsFixed(0)}%',
-                                  radius: 70,
-                                  titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-                                );
-                              }).toList(),
-                              sectionsSpace: 2,
-                              centerSpaceRadius: 40,
-                            ),
-                          ),
-                        ),
+                        CategoryPieChart(totals: byCategory),
                         const SizedBox(height: 12),
-                        CategoryLegend(totals: byCategory),
+                        CategoryLegend(totals: byCategory, showPercent: true),
                       ],
                       if (incomes.isNotEmpty) ...[
                         const SizedBox(height: 32),
