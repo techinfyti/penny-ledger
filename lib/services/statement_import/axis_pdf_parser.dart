@@ -41,8 +41,10 @@ class AxisPdfParser {
       }
       if (header == null) continue;
 
-      if (text.toLowerCase() == 'opening balance' && i + 1 < lines.length) {
-        opening ??= CsvStatementParser.parseNumber(lines[i + 1].text);
+      if (text.toLowerCase().startsWith('opening balance')) {
+        // The amount is either on the same line or, as in the printed statement, on the next one.
+        final sameLine = CsvStatementParser.parseNumber(text.substring('opening balance'.length));
+        opening ??= sameLine ?? (i + 1 < lines.length ? CsvStatementParser.parseNumber(lines[i + 1].text) : null);
         continue;
       }
       if (_stop.hasMatch(text)) {

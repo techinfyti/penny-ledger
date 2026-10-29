@@ -314,6 +314,45 @@ void main() {
     });
   });
 
+  group('Statement whose table starts on page 2', () {
+    test('an Axis style PDF with a summary page first is read end to end', () async {
+      final doc = PdfDocument();
+      final font = PdfStandardFont(PdfFontFamily.helvetica, 9);
+      void text(PdfPage page, String value, double x, double y) =>
+          page.graphics.drawString(value, font, bounds: Rect.fromLTWH(x, y, 300, 12));
+
+      final summary = doc.pages.add();
+      text(summary, 'Account summary and total balance of your savings account', 30, 40);
+      text(summary, 'Interest on your Savings Account is credited every quarter', 30, 60);
+
+      final table = doc.pages.add();
+      text(table, 'Detailed Statement for a/c between 01-09-2026 to 30-09-2026', 25, 30);
+      text(table, 'Txn', 30, 60);
+      text(table, 'Date', 50, 60);
+      text(table, 'Transaction', 149, 60);
+      text(table, 'Withdrawals', 281, 60);
+      text(table, 'Deposits', 356, 60);
+      text(table, 'Balance', 430, 60);
+      text(table, 'Opening Balance', 81, 80);
+      text(table, '21,777.90', 436, 80);
+      text(table, '05-09-2026', 24, 100);
+      text(table, 'CreditCard Payment XX 9388', 81, 100);
+      text(table, '8,847.82', 299, 100);
+      text(table, 'Closing Balance', 81, 140);
+      text(table, '12,930.08', 438, 140);
+      final bytes = Uint8List.fromList(await doc.save());
+      doc.dispose();
+
+      final parsed = await StatementReader.read(fileName: 'axis.pdf', bytes: bytes);
+
+      expect(parsed.items.length, 1);
+      expect(parsed.items.single.amount, 8847.82);
+      expect(parsed.items.single.isIncome, isFalse);
+      expect(parsed.items.single.date, DateTime(2026, 9, 5));
+      expect(parsed.totalsMatch, isTrue);
+    });
+  });
+
   group('Wrong kind of PDF', () {
     test('is rejected from the first page, without reading every page', () async {
       final doc = PdfDocument();

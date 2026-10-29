@@ -14,6 +14,10 @@ import 'table_pdf_parser.dart';
 import 'xlsx_reader.dart';
 
 class StatementReader {
+  /// Statements may open with a summary page, so the transaction table can be on page 2 or 3.
+  static const _maxCheckedPages = 3;
+  static final _bankish = RegExp(r'statement|account|a/c|transaction|passbook|balance', caseSensitive: false);
+
   static Future<ParsedStatement> read({
     required String fileName,
     required Uint8List bytes,
@@ -42,18 +46,39 @@ class StatementReader {
     var isTable = false;
     final lines = <PdfLine>[];
     PdfDocument? document;
-    try {
-      document = password == null ? PdfDocument(inputBytes: bytes) : PdfDocument(inputBytes: bytes, password: password);
-      final extractor = PdfTextExtractor(document);
-      // Line mode keeps Google Pay's characters in reading order; plain text mode scrambles them.
-      // The first page is checked before reading the rest, so a PDF of the wrong kind is rejected quickly.
-      lines.addAll(_toLines(extractor.extractTextLines(startPageIndex: 0, endPageIndex: 0)));
+
+    bool detect() {
       isGpay = GpayPdfParser.looksLikeGpay(lines.map((l) => l.text).join('\n'));
       isBank = !isGpay && BankPdfParser.looksLikeBank(lines);
       isAxis = !isGpay && !isBank && AxisPdfParser.looksLikeAxis(lines);
       isTable = !isGpay && !isBank && !isAxis && TablePdfParser.looksLikeTable(lines);
-      if ((isGpay || isBank || isAxis || isTable) && document.pages.count > 1) {
-        lines.addAll(_toLines(extractor.extractTextLines(startPageIndex: 1, endPageIndex: document.pages.count - 1)));
+      return isGpay || isBank || isAxis || isTable;
+    }
+
+    try {
+      document = password == null ? PdfDocument(inputBytes: bytes) : PdfDocument(inputBytes: bytes, password: password);
+      final extractor = PdfTextExtractor(document);
+      final pageCount = document.pages.count;
+      var nextPage = 0;
+      void readPage(int index) {
+        // Line mode keeps Google Pay's characters in reading order; plain text mode scrambles them.
+        lines.addAll(_toLines(extractor.extractTextLines(startPageIndex: index, endPageIndex: index)));
+        nextPage = index + 1;
+      }
+
+      // The first page is checked before reading the rest, so a PDF of the wrong kind is rejected quickly.
+      readPage(0);
+      var found = detect();
+      // Some statements open with a summary page. If page 1 reads like a bank document,
+      // look at the next pages too, but no further than the first few.
+      if (!found && _bankish.hasMatch(lines.map((l) => l.text).join(' '))) {
+        while (!found && nextPage < pageCount && nextPage < _maxCheckedPages) {
+          readPage(nextPage);
+          found = detect();
+        }
+      }
+      if (found && nextPage < pageCount) {
+        lines.addAll(_toLines(extractor.extractTextLines(startPageIndex: nextPage, endPageIndex: pageCount - 1)));
       }
     } catch (e) {
       final message = e.toString().toLowerCase();
