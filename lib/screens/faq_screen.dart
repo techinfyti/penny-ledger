@@ -47,6 +47,7 @@ class FaqScreen extends StatelessWidget {
     (
       'Which statements can I import?',
       '• Google Pay: the PDF "Transaction statement" (Google Pay → Show transaction history → download icon → pick the dates). Totals are checked against the totals printed on the statement.\n'
+          '• HDFC Bank or Axis Bank savings account statement (PDF) from net banking or the app. If the PDF is password protected, the app asks for the password. Other banks\' PDFs (such as ICICI or Canara) are read on a best-effort basis: check the banner on the review screen, which tells you if the amounts match the statement\'s balances. If it doesn\'t, or the PDF is refused, use the bank\'s CSV or Excel download instead.\n'
           '• Banks: the CSV or Excel (.xlsx) statement from net banking or your bank\'s app. It needs a Date column and either Debit / Credit columns or one Amount column.\n'
           '• Paytm: the CSV or Excel statement downloaded from Paytm.\n'
           '• PhonePe, BHIM, Amazon Pay and other UPI apps: their PDF statements are not supported yet. Use your bank\'s CSV or Excel statement instead, which includes those UPI payments.\n'

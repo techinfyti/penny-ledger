@@ -32,12 +32,22 @@ class ParsedStatement {
   final double? statedExpenseTotal;
   final double? statedIncomeTotal;
 
+  /// Balances printed on the statement, used when it has no totals: the
+  /// transactions must add up to the difference between them.
+  final double? statedOpening;
+  final double? statedClosing;
+
   ParsedStatement({
     required this.sourceLabel,
     required this.items,
     this.statedExpenseTotal,
     this.statedIncomeTotal,
+    this.statedOpening,
+    this.statedClosing,
   });
+
+  bool get checksBalances =>
+      statedExpenseTotal == null && statedIncomeTotal == null && statedOpening != null && statedClosing != null;
 
   double get expenseTotal => items.where((t) => !t.isIncome).fold(0.0, (sum, t) => sum + t.amount);
 
@@ -45,6 +55,9 @@ class ParsedStatement {
 
   /// Null when the statement doesn't print totals to check against.
   bool? get totalsMatch {
+    if (checksBalances) {
+      return ((incomeTotal - expenseTotal) - (statedClosing! - statedOpening!)).abs() < 0.01;
+    }
     if (statedExpenseTotal == null && statedIncomeTotal == null) return null;
     final expenseOk = statedExpenseTotal == null || (expenseTotal - statedExpenseTotal!).abs() < 0.01;
     final incomeOk = statedIncomeTotal == null || (incomeTotal - statedIncomeTotal!).abs() < 0.01;

@@ -4,9 +4,13 @@ import 'dart:typed_data';
 
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
+import 'axis_pdf_parser.dart';
+import 'bank_pdf_parser.dart';
 import 'csv_statement_parser.dart';
 import 'gpay_pdf_parser.dart';
 import 'imported_transaction.dart';
+import 'pdf_lines.dart';
+import 'table_pdf_parser.dart';
 import 'xlsx_reader.dart';
 
 class StatementReader {
@@ -27,19 +31,29 @@ class StatementReader {
     throw StatementFormatException('Choose a PDF, Excel (.xlsx) or CSV file.');
   }
 
+  static List<PdfLine> _toLines(List<TextLine> lines) => [
+        for (final l in lines) PdfLine(l.text, [for (final w in l.wordCollection) PdfWord(w.text, w.bounds.left, w.bounds.width)]),
+      ];
+
   static ParsedStatement _readPdf(Uint8List bytes, String? password) {
     var isGpay = false;
-    final lines = <String>[];
+    var isBank = false;
+    var isAxis = false;
+    var isTable = false;
+    final lines = <PdfLine>[];
     PdfDocument? document;
     try {
       document = password == null ? PdfDocument(inputBytes: bytes) : PdfDocument(inputBytes: bytes, password: password);
       final extractor = PdfTextExtractor(document);
       // Line mode keeps Google Pay's characters in reading order; plain text mode scrambles them.
       // The first page is checked before reading the rest, so a PDF of the wrong kind is rejected quickly.
-      lines.addAll(extractor.extractTextLines(startPageIndex: 0, endPageIndex: 0).map((l) => l.text));
-      isGpay = GpayPdfParser.looksLikeGpay(lines.join('\n'));
-      if (isGpay && document.pages.count > 1) {
-        lines.addAll(extractor.extractTextLines(startPageIndex: 1, endPageIndex: document.pages.count - 1).map((l) => l.text));
+      lines.addAll(_toLines(extractor.extractTextLines(startPageIndex: 0, endPageIndex: 0)));
+      isGpay = GpayPdfParser.looksLikeGpay(lines.map((l) => l.text).join('\n'));
+      isBank = !isGpay && BankPdfParser.looksLikeBank(lines);
+      isAxis = !isGpay && !isBank && AxisPdfParser.looksLikeAxis(lines);
+      isTable = !isGpay && !isBank && !isAxis && TablePdfParser.looksLikeTable(lines);
+      if ((isGpay || isBank || isAxis || isTable) && document.pages.count > 1) {
+        lines.addAll(_toLines(extractor.extractTextLines(startPageIndex: 1, endPageIndex: document.pages.count - 1)));
       }
     } catch (e) {
       final message = e.toString().toLowerCase();
@@ -51,12 +65,18 @@ class StatementReader {
       document?.dispose();
     }
 
-    if (!isGpay) {
+    if (!isGpay && !isBank && !isAxis && !isTable) {
       throw StatementFormatException(
-        'This PDF isn\'t a Google Pay statement. For bank or Paytm statements, download the CSV or Excel (.xlsx) version and import that.',
+        'This PDF isn\'t a Google Pay or bank account statement we can read. Download the CSV or Excel (.xlsx) version from your bank and import that.',
       );
     }
-    final parsed = GpayPdfParser.parse(lines);
+    final parsed = isGpay
+        ? GpayPdfParser.parse(lines.map((l) => l.text).toList())
+        : isAxis
+            ? AxisPdfParser.parse(lines)
+            : isTable
+                ? TablePdfParser.parse(lines)
+                : BankPdfParser.parse(lines);
     if (parsed.items.isEmpty) {
       throw StatementFormatException('No transactions found in this statement.');
     }

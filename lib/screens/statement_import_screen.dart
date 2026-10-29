@@ -396,7 +396,7 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
             style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
         Text(
-          'Add many transactions at once from a Google Pay statement (PDF) or a bank or Paytm statement (CSV or Excel).',
+          'Add many transactions at once from a Google Pay, HDFC Bank or Axis Bank statement (PDF), or a bank or Paytm statement (CSV or Excel).',
           textAlign: TextAlign.center,
           style: TextStyle(color: muted),
         ),
@@ -420,7 +420,7 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
         _hint(context, Icons.picture_as_pdf_outlined,
             'Google Pay: open Show transaction history, tap the download icon, and pick a date range.'),
         _hint(context, Icons.table_chart_outlined,
-            'Banks and Paytm: download the statement as CSV or Excel (.xlsx) from the app or net banking. Older .xls files: save as .xlsx or CSV first.'),
+            'HDFC Bank and Axis Bank: the savings account statement PDF works (the app asks for its password). Other banks\' PDFs may work too, so check the banner on the next screen. Other banks and Paytm: download the statement as CSV or Excel (.xlsx) from the app or net banking. Older .xls files: save as .xlsx or CSV first.'),
         _hint(context, Icons.lock_outline,
             'Your file is read on your phone. Nothing is saved until you tap Import.'),
       ],
@@ -489,9 +489,11 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
                   Expanded(
                     child: Text(
                       match
-                          ? 'Totals match the statement'
-                          : 'Totals don\'t match the statement ($symbol${money.format(parsed.statedExpenseTotal ?? 0)} sent, '
-                              '$symbol${money.format(parsed.statedIncomeTotal ?? 0)} received). Check the list before importing.',
+                          ? (parsed.checksBalances ? 'Matches the statement\'s opening and closing balance' : 'Totals match the statement')
+                          : parsed.checksBalances
+                              ? 'The transactions don\'t add up to the statement\'s opening and closing balance. Check the list before importing.'
+                              : 'Totals don\'t match the statement ($symbol${money.format(parsed.statedExpenseTotal ?? 0)} sent, '
+                                  '$symbol${money.format(parsed.statedIncomeTotal ?? 0)} received). Check the list before importing.',
                       style: const TextStyle(fontSize: 13),
                     ),
                   ),
