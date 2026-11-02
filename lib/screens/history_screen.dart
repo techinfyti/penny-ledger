@@ -47,6 +47,9 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
+  static const int _pageSize = 200;
+  int _limit = _pageSize;
+
   _TypeFilter _filter = _TypeFilter.all;
   _SortOrder _sort = _SortOrder.dateDesc;
   String _query = '';
@@ -278,12 +281,26 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       range.start,
                       range.end.add(const Duration(days: 1)),
                     )
-                  : firestore.allExpenses(widget.uid, accountId),
+                  : firestore.allExpenses(widget.uid, accountId, limit: _limit),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+                // Only show the spinner on the very first load: when more rows are requested the
+                // list stays on screen, so the scroll position is kept.
+                if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
                 var transactions = snapshot.data ?? [];
+                // allExpenses returns at most _limit rows, so a full page means older ones may exist.
+                final hasMore = range == null && transactions.length >= _limit;
+                final loadMore = Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Center(
+                    child: TextButton.icon(
+                      onPressed: () => setState(() => _limit += _pageSize),
+                      icon: const Icon(Icons.expand_more),
+                      label: const Text('Load older transactions'),
+                    ),
+                  ),
+                );
                 if (_filter == _TypeFilter.income) {
                   transactions = transactions.where((e) => e.type == TransactionType.income).toList();
                 } else if (_filter == _TypeFilter.expense) {
@@ -335,8 +352,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       if (groupSummary != null) groupSummary,
                       Expanded(
                         child: ListView.builder(
-                          itemCount: transactions.length,
+                          itemCount: transactions.length + (hasMore ? 1 : 0),
                           itemBuilder: (context, index) {
+                            if (index == transactions.length) return loadMore;
                             final e = transactions[index];
                             final parts = [
                               dateFormat.format(e.date),
@@ -379,8 +397,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     if (groupSummary != null) groupSummary,
                     Expanded(
                       child: ListView.builder(
-                        itemCount: rows.length,
+                        itemCount: rows.length + (hasMore ? 1 : 0),
                         itemBuilder: (context, index) {
+                          if (index == rows.length) return loadMore;
                           final row = rows[index];
                           if (row.headerDate != null) {
                             return _DateHeader(
