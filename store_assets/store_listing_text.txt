@@ -1,0 +1,47 @@
+=== TITLE (max 30 characters; optional change) ===
+Penny Ledger: Expense Tracker
+
+=== SHORT DESCRIPTION (max 80 characters) ===
+Daily expense tracker & ledger with budgets, reports and statement import
+
+=== FULL DESCRIPTION (max 4000 characters) ===
+Penny Ledger is a simple, fast expense tracker and income ledger — built for anyone who wants a clear picture of where their money goes, without the clutter.
+
+TRACK EVERYTHING
+• Log expenses and income in seconds, with categories, payment methods and notes
+• Daily, Monthly and Yearly dashboards with clear charts and spending insights
+• Tag transactions by group — Family, Friends, Team or any custom label
+• Multi-currency support with live symbol display
+• Recurring transactions, so bills and subscriptions log themselves
+
+IMPORT TRANSACTIONS (PREMIUM)
+Stop typing each payment by hand. Import a whole statement at once:
+• Google Pay statement (PDF)
+• HDFC Bank and Axis Bank account statements (PDF, password-protected files supported)
+• Bank and Paytm statements as CSV or Excel (.xlsx)
+• Other banks' PDF statements are read on a best-effort basis
+Review every transaction before you save: change categories, untick anything you don't want, and choose a group. The app suggests categories from the shop or person's name and remembers your choices. It flags transactions you already added, so importing the same statement twice never creates duplicates. Statement files are read on your phone, and nothing is saved until you tap Import.
+
+STAY ON BUDGET
+• Set category-wise budget limits for any month
+• Look back at earlier months, or plan the next one
+• Copy last month's budget in one tap, or remove a limit you no longer need
+• Get alerts when you're approaching or over budget
+• Spending insights that compare this month to last
+
+SEARCH, SORT & EXPORT
+• Powerful History screen with search, filters, date ranges and sorting
+• Load older transactions with one tap
+• Export your data as CSV or a shareable PDF report
+
+SECURITY & PRIVACY
+• Sign in securely with Google
+• Optional App Lock using your device's fingerprint, face or PIN
+• Your data stays private to your account
+
+GO PREMIUM (OPTIONAL)
+Unlock Import Transactions, multiple accounts, cloud backup and restore via Google Drive, CSV export, an ad-free experience and priority support — with Lifetime, 5-Year or Monthly plans to fit how you use the app.
+
+Penny Ledger is free to use, with a simple, respectful ad experience for the free plan. No spending caps, no nagging — just a clean way to track your money.
+
+Questions or feedback? Reach us at techinfy.ti@gmail.com.
