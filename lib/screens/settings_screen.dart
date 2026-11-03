@@ -7,6 +7,7 @@ import '../services/app_lock_service.dart';
 import '../services/auth_service.dart';
 import '../services/drive_backup_service.dart';
 import '../services/premium_service.dart';
+import '../services/rating_prompt.dart';
 import '../services/theme_service.dart';
 import 'accounts_screen.dart';
 import 'customer_support_screen.dart';
@@ -359,6 +360,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 MaterialPageRoute(builder: (_) => const FaqScreen()),
               );
             },
+          ),
+          ListTile(
+            leading: const Icon(Icons.star_outline),
+            title: const Text('Rate PennyLedger'),
+            subtitle: const Text('Enjoying the app? Leave a rating on Google Play'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: RatingPrompt.openStorePage,
           ),
           ListTile(
             leading: const Icon(Icons.support_agent_outlined),

@@ -78,6 +78,10 @@ class FaqScreen extends StatelessWidget {
       'Tap Edit on the category, then Remove limit. It only clears that category for the month you are viewing; other months are not affected.',
     ),
     (
+      'How can I rate PennyLedger?',
+      'Go to Settings → Rate PennyLedger, which opens our page on Google Play where you can tap the stars. After you have used the app for a while, PennyLedger may also show Google\'s rating box once in a while. You can always close it, and it will not ask again for at least a month.',
+    ),
+    (
       'Is my app lock the same as my phone lock?',
       'No, it\'s a separate layer. Enable App Lock in Settings to require your device\'s fingerprint, face, or PIN every time you open PennyLedger, on top of your regular phone lock screen.',
     ),

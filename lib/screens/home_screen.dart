@@ -8,6 +8,7 @@ import '../services/recurring_service.dart';
 import 'add_expense_screen.dart';
 import 'budget_screen.dart';
 import 'daily_dashboard.dart';
+import '../services/rating_prompt.dart';
 import 'history_screen.dart';
 import 'monthly_dashboard.dart';
 import 'yearly_dashboard.dart';
@@ -67,6 +68,8 @@ class _HomeScreenState extends State<HomeScreen> {
           await Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => AddExpenseScreen(uid: widget.uid)),
           );
+          // Back on a main screen after finishing: a good moment to ask for a rating, if it is due.
+          RatingPrompt.maybeAsk();
         },
         child: const Icon(Icons.add),
       ),

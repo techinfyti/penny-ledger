@@ -13,6 +13,7 @@ import '../services/currency_service.dart';
 import '../services/firestore_service.dart';
 import '../services/group_service.dart';
 import '../services/premium_service.dart';
+import '../services/rating_prompt.dart';
 import '../services/statement_import/category_suggester.dart';
 import '../services/statement_import/imported_transaction.dart';
 import '../services/statement_import/statement_reader.dart';
@@ -21,9 +22,12 @@ import 'premium_screen.dart';
 /// Import Transactions is a Premium feature: free users land on the Premium screen.
 void openStatementImport(BuildContext context, String uid) {
   final isPremium = context.read<PremiumService>().isPremium;
-  Navigator.of(context).push(
-    MaterialPageRoute(builder: (_) => isPremium ? StatementImportScreen(uid: uid) : PremiumScreen(uid: uid)),
-  );
+  Navigator.of(context)
+      .push(
+        MaterialPageRoute(builder: (_) => isPremium ? StatementImportScreen(uid: uid) : PremiumScreen(uid: uid)),
+      )
+      // Back on a main screen after an import: ask for a rating if it is due.
+      .then((_) => RatingPrompt.maybeAsk());
 }
 
 const int _maxFileBytes = 15 * 1024 * 1024;
@@ -246,6 +250,7 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
                 ))
             .toList(),
       );
+      RatingPrompt.recordActions(chosen.length);
       await CategorySuggester.saveMemory({
         for (final t in chosen)
           if (t.category != 'Other' && t.category != 'Other Income')

@@ -10,6 +10,7 @@ import '../services/currency_service.dart';
 import '../services/firestore_service.dart';
 import '../services/group_service.dart';
 import '../services/notification_service.dart';
+import '../services/rating_prompt.dart';
 import '../services/recurring_service.dart';
 
 const String _addCategorySentinel = '__add_new__';
@@ -217,6 +218,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         await firestore.updateExpense(widget.uid, expense);
       } else {
         await firestore.addExpense(widget.uid, expense);
+        RatingPrompt.recordActions(1);
         if (_repeatMonthly) {
           final monthKey = '${_date.year}-${_date.month.toString().padLeft(2, '0')}';
           await recurringService.createRecurring(
