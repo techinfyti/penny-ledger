@@ -37,6 +37,16 @@ class RatingPrompt {
     }
   }
 
+  /// How many transactions have been added or imported so far (used to time other prompts too).
+  static Future<int> actions() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getInt(_actionsKey) ?? 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   /// Call when the user has finished a task and is back on a main screen.
   static Future<void> maybeAsk() async {
     try {

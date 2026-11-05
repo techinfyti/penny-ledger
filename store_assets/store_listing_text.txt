@@ -13,9 +13,10 @@ TRACK EVERYTHING
 • Tag transactions by group — Family, Friends, Team or any custom label
 • Multi-currency support with live symbol display
 • Recurring transactions, so bills and subscriptions log themselves
+• Optional daily reminder, so you never miss a day
 
-IMPORT TRANSACTIONS (PREMIUM)
-Stop typing each payment by hand. Import a whole statement at once:
+IMPORT TRANSACTIONS (FREE UP TO 25 A MONTH)
+Stop typing each payment by hand. Import a whole statement at once. Free accounts can import 25 transactions a month; Premium has no limit:
 • Google Pay statement (PDF)
 • HDFC Bank and Axis Bank account statements (PDF, password-protected files supported)
 • Bank and Paytm statements as CSV or Excel (.xlsx)
@@ -40,7 +41,7 @@ SECURITY & PRIVACY
 • Your data stays private to your account
 
 GO PREMIUM (OPTIONAL)
-Unlock Import Transactions, multiple accounts, cloud backup and restore via Google Drive, CSV export, an ad-free experience and priority support — with Lifetime, 5-Year or Monthly plans to fit how you use the app.
+Unlock unlimited Import Transactions, multiple accounts, cloud backup and restore via Google Drive, CSV export, an ad-free experience and priority support — with Lifetime, 5-Year or Monthly plans to fit how you use the app.
 
 Penny Ledger is free to use, with a simple, respectful ad experience for the free plan. No spending caps, no nagging — just a clean way to track your money.
 

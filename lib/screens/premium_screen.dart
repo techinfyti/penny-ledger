@@ -218,7 +218,7 @@ class _FeatureTable extends StatelessWidget {
     'Multiple Accounts',
     'Cloud Backup & Restore',
     'CSV Export',
-    'Import Transactions',
+    'Unlimited Import Transactions',
     'Ad-Free Experience',
     'Priority Support',
   ];

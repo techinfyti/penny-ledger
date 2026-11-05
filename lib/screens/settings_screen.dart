@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import '../services/drive_backup_service.dart';
 import '../services/premium_service.dart';
 import '../services/rating_prompt.dart';
+import '../widgets/reminder_tile.dart';
 import '../services/theme_service.dart';
 import 'accounts_screen.dart';
 import 'customer_support_screen.dart';
@@ -346,6 +347,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: _referApp,
           ),
           const Divider(),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Text('Reminders', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          ),
+          const ReminderTile(),
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Text('Help', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),

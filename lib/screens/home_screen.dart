@@ -9,6 +9,7 @@ import 'add_expense_screen.dart';
 import 'budget_screen.dart';
 import 'daily_dashboard.dart';
 import '../services/rating_prompt.dart';
+import '../services/reminder_service.dart';
 import 'history_screen.dart';
 import 'monthly_dashboard.dart';
 import 'yearly_dashboard.dart';
@@ -44,7 +45,10 @@ class _HomeScreenState extends State<HomeScreen> {
       context.read<CategoryService>().pruneCustomCategoriesMatchingDefaults(widget.uid).catchError((_) {}),
       context.read<RecurringService>().processDueRecurring(widget.uid).catchError((_) {}),
     ]);
-    if (mounted) setState(() => _ready = true);
+    if (mounted) {
+      setState(() => _ready = true);
+      context.read<ReminderService>().reschedule();
+    }
   }
 
   @override
@@ -68,7 +72,10 @@ class _HomeScreenState extends State<HomeScreen> {
           await Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => AddExpenseScreen(uid: widget.uid)),
           );
-          // Back on a main screen after finishing: a good moment to ask for a rating, if it is due.
+          // Back on a main screen after finishing: a good moment to offer the daily reminder (once)
+          // and then to ask for a rating, if either is due.
+          if (!context.mounted) return;
+          await context.read<ReminderService>().maybeAsk(context);
           RatingPrompt.maybeAsk();
         },
         child: const Icon(Icons.add),

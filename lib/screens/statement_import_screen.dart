@@ -12,20 +12,20 @@ import '../services/category_service.dart';
 import '../services/currency_service.dart';
 import '../services/firestore_service.dart';
 import '../services/group_service.dart';
+import '../services/import_quota_service.dart';
 import '../services/premium_service.dart';
+import '../services/reminder_service.dart';
 import '../services/rating_prompt.dart';
 import '../services/statement_import/category_suggester.dart';
 import '../services/statement_import/imported_transaction.dart';
 import '../services/statement_import/statement_reader.dart';
 import 'premium_screen.dart';
 
-/// Import Transactions is a Premium feature: free users land on the Premium screen.
+/// Opens Import Transactions for everyone. Free accounts can import a limited number of
+/// transactions a month (see [ImportQuotaService]); Premium has no limit.
 void openStatementImport(BuildContext context, String uid) {
-  final isPremium = context.read<PremiumService>().isPremium;
   Navigator.of(context)
-      .push(
-        MaterialPageRoute(builder: (_) => isPremium ? StatementImportScreen(uid: uid) : PremiumScreen(uid: uid)),
-      )
+      .push(MaterialPageRoute(builder: (_) => StatementImportScreen(uid: uid)))
       // Back on a main screen after an import: ask for a rating if it is due.
       .then((_) => RatingPrompt.maybeAsk());
 }
@@ -51,6 +51,10 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
   List<String> _incomeCategories = defaultIncomeCategories;
   String? _groupId;
   int? _importedCount;
+  bool _isPremium = false;
+  int _usedThisMonth = 0;
+
+  int get _freeLeft => ImportQuotaService.remaining(_usedThisMonth);
   int _skippedCount = 0;
 
   Future<void> _pick() async {
@@ -88,6 +92,8 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
       {String? password}) async {
     final bytes =
         rawBytes is Uint8List ? rawBytes : Uint8List.fromList(rawBytes);
+    final isPremium = context.read<PremiumService>().isPremium;
+    final quotaService = context.read<ImportQuotaService>();
     setState(() {
       _busy = true;
       _error = null;
@@ -98,8 +104,11 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
       final parsed = await StatementReader.read(
           fileName: name, bytes: bytes, pdfPassword: password);
       await _prepare(parsed);
+      final used = isPremium ? 0 : await quotaService.usedThisMonth(widget.uid);
       if (!mounted) return;
       setState(() {
+        _isPremium = isPremium;
+        _usedThisMonth = used;
         _parsed = parsed;
         _busy = false;
       });
@@ -220,12 +229,15 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
   String _key(Expense e) =>
       '${DateFormat('yyyy-MM-dd').format(e.date)}|${e.amount.toStringAsFixed(2)}|${e.type.field}';
 
-  Future<void> _import() async {
+  Future<void> _import({int? limit}) async {
     final parsed = _parsed;
     if (parsed == null) return;
     final firestore = context.read<FirestoreService>();
+    final reminders = context.read<ReminderService>();
+    final quotaService = context.read<ImportQuotaService>();
     final accountId = context.read<AccountService>().currentAccountId;
-    final chosen = parsed.items.where((t) => t.selected).toList();
+    var chosen = parsed.items.where((t) => t.selected).toList();
+    if (limit != null && chosen.length > limit) chosen = chosen.sublist(0, limit);
     if (chosen.isEmpty) return;
 
     setState(() {
@@ -251,6 +263,11 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
             .toList(),
       );
       RatingPrompt.recordActions(chosen.length);
+      reminders.markAddedToday();
+      if (!_isPremium) {
+        await quotaService.record(widget.uid, chosen.length);
+        _usedThisMonth += chosen.length;
+      }
       await CategorySuggester.saveMemory({
         for (final t in chosen)
           if (t.category != 'Other' && t.category != 'Other Income')
@@ -510,6 +527,7 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
             const SizedBox(height: 8),
             Text(_error!, style: TextStyle(color: scheme.error, fontSize: 13)),
           ],
+          if (!_isPremium) _freeLimitBanner(context),
           _importSettings(context),
           Row(
             children: [
@@ -541,16 +559,66 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
           top: false,
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: selected == 0 ? null : _import,
-                child: Text('Import $selected transactions'),
-              ),
-            ),
+            child: _importButtons(selected),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _importButtons(int selected) {
+    final overLimit = !_isPremium && selected > _freeLeft;
+    if (!overLimit) {
+      return SizedBox(
+        width: double.infinity,
+        child: FilledButton(
+          onPressed: selected == 0 ? null : _import,
+          child: Text('Import $selected transactions'),
+        ),
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => PremiumScreen(uid: widget.uid)),
+            ),
+            child: Text('Upgrade to import all $selected'),
+          ),
+        ),
+        if (_freeLeft > 0)
+          TextButton(
+            onPressed: () => _import(limit: _freeLeft),
+            child: Text('Import the first $_freeLeft only (free)'),
+          ),
+      ],
+    );
+  }
+
+  Widget _freeLimitBanner(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final left = _freeLeft;
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(color: scheme.secondaryContainer, borderRadius: BorderRadius.circular(8)),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, size: 18, color: scheme.onSecondaryContainer),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              left > 0
+                  ? 'Free plan: ${ImportQuotaService.freeMonthlyLimit} imported transactions a month. $left left this month. Premium has no limit.'
+                  : 'You have used this month\'s ${ImportQuotaService.freeMonthlyLimit} free imported transactions. Upgrade to Premium for unlimited imports.',
+              style: TextStyle(fontSize: 13, color: scheme.onSecondaryContainer),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -645,6 +713,10 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
             if (_skippedCount > 0) ...[
               const SizedBox(height: 6),
               Text('$_skippedCount skipped', style: TextStyle(color: muted)),
+            ],
+            if (!_isPremium) ...[
+              const SizedBox(height: 6),
+              Text('$_freeLeft free imports left this month', style: TextStyle(color: muted)),
             ],
             const SizedBox(height: 20),
             FilledButton(

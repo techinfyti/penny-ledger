@@ -17,7 +17,9 @@ import 'services/currency_service.dart';
 import 'services/drive_backup_service.dart';
 import 'services/firestore_service.dart';
 import 'services/group_service.dart';
+import 'services/import_quota_service.dart';
 import 'services/notification_service.dart';
+import 'services/reminder_service.dart';
 import 'services/pdf_report_service.dart';
 import 'services/premium_service.dart';
 import 'services/purchase_service.dart';
@@ -92,6 +94,8 @@ class DailyExpenseApp extends StatelessWidget {
           create: (context) => DriveBackupService(context.read<AuthService>().googleSignIn),
         ),
         Provider<NotificationService>.value(value: notificationService),
+        Provider<ReminderService>(create: (_) => ReminderService(notificationService)),
+        Provider<ImportQuotaService>(create: (_) => ImportQuotaService()),
         ChangeNotifierProvider<CurrencyService>.value(value: currencyService),
         ChangeNotifierProvider<AppLockService>.value(value: appLockService),
         ChangeNotifierProvider<ThemeService>.value(value: themeService),

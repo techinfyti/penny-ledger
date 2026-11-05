@@ -14,7 +14,7 @@ class FaqScreen extends StatelessWidget {
     ),
     (
       'What does Premium unlock?',
-      'Premium unlocks unlimited accounts, Google Drive backup & restore, CSV export, Import Transactions (from Google Pay, bank and Paytm statements), an ad-free experience, and priority support. Go to Settings → Upgrade to Premium to see current pricing.',
+      'Premium unlocks unlimited accounts, Google Drive backup & restore, CSV export, unlimited Import Transactions (free accounts can import 25 transactions a month), an ad-free experience, and priority support. Go to Settings → Upgrade to Premium to see current pricing.',
     ),
     (
       'How do I back up my data?',
@@ -41,8 +41,8 @@ class FaqScreen extends StatelessWidget {
       'The Settings icon (⚙) is in the top bar of every tab: Daily, Monthly, Yearly, History and Budget. The ⋮ menu on Daily, Monthly, Yearly and History has Import Transactions, Download / Share PDF, Print PDF, Export CSV and Recurring transactions. History\'s ⋮ menu also has Filter by date.',
     ),
     (
-      'How do I import transactions from a statement? (Premium)',
-      'Import Transactions is a Premium feature. Tap ⋮ → Import Transactions on Daily, Monthly, Yearly or History, then Choose file. PennyLedger reads the file on your phone and shows every transaction with a tick box, its category and the amount. Untick anything you don\'t want, change categories if needed, optionally choose a Group, and tap Import. Nothing is saved until you tap Import.',
+      'How do I import transactions from a statement?',
+      'Free accounts can import up to 25 transactions a month; Premium has no limit. Tap ⋮ → Import Transactions on Daily, Monthly, Yearly or History, then Choose file. PennyLedger reads the file on your phone and shows every transaction with a tick box, its category and the amount. Untick anything you don\'t want, change categories if needed, optionally choose a Group, and tap Import. Nothing is saved until you tap Import.',
     ),
     (
       'Which statements can I import?',
@@ -76,6 +76,10 @@ class FaqScreen extends StatelessWidget {
     (
       'How do I remove a budget limit?',
       'Tap Edit on the category, then Remove limit. It only clears that category for the month you are viewing; other months are not affected.',
+    ),
+    (
+      'How does the daily reminder work?',
+      'Turn it on under Settings → Reminders, and pick a time. PennyLedger then sends one gentle notification a day to remind you to add your expenses. If you have already added a transaction that day, you are not reminded. PennyLedger also offers the reminder once after you add a few transactions. Switch it off any time in Settings. If you do not get reminders, check that notifications are allowed for PennyLedger in your phone settings.',
     ),
     (
       'How can I rate PennyLedger?',
